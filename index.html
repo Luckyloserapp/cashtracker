@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2a78d6">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>CashTracker</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232a78d6'/%3E%3Cpath d='M8 21l5-6 4 4 7-9' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">CashTracker</div>
+  <nav class="tabs" id="tabs">
+    <button data-view="overview" class="active">Přehled</button>
+    <button data-view="transactions">Záznamy</button>
+    <button data-view="stats">Statistiky</button>
+    <button data-view="year">Rok</button>
+    <button data-view="recurring">Pravidelné</button>
+    <button data-view="settings">Nastavení</button>
+  </nav>
+</header>
+
+<main>
+  <!-- ============ PŘEHLED ============ -->
+  <section id="view-overview" class="view active">
+    <div class="period-nav">
+      <button class="icon-btn" id="prevPeriod" title="Předchozí období">‹</button>
+      <div>
+        <h1 id="periodTitle">…</h1>
+        <div class="muted" id="periodRange"></div>
+      </div>
+      <button class="icon-btn" id="nextPeriod" title="Další období">›</button>
+      <button class="ghost" id="todayPeriod">Aktuální</button>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h2>Nový záznam</h2>
+        <form id="quickForm" class="tx-form" autocomplete="off"></form>
+      </div>
+      <div class="card">
+        <div class="kpis" id="kpis"></div>
+        <div id="recurringBanner"></div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-head">
+          <h2>Výdaje podle kategorií</h2>
+          <span class="legend-inline"><span class="tick-sample"></span> Ø posledních 12 období</span>
+        </div>
+        <div id="catBars"></div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h2>Záznamy v období</h2>
+          <button class="ghost small" id="showAllPeriod">Vše v Záznamech →</button>
+        </div>
+        <div id="periodList" class="tx-list"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ZÁZNAMY ============ -->
+  <section id="view-transactions" class="view">
+    <div class="card filters">
+      <label>Měsíc <select id="fPeriod"></select></label>
+      <label>Kategorie <select id="fCat"><option value="">Všechny</option></select></label>
+      <label>Platba <select id="fNec"><option value="">Všechny</option><option value="1">Nutné</option><option value="0">Volitelné</option></select></label>
+      <label class="grow">Hledat v poznámce <input type="search" id="fQ" placeholder="např. Alza, benzín…"></label>
+      <button class="ghost" id="fReset">Zrušit filtr</button>
+    </div>
+    <div class="card">
+      <div class="totals" id="txTotals"></div>
+      <div class="table-wrap">
+        <table class="data" id="txTable">
+          <thead><tr><th>Datum</th><th>Kategorie</th><th>Platba</th><th>Poznámka</th><th class="num">Částka</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="center"><button class="ghost" id="txMore" hidden>Načíst další</button></div>
+    </div>
+  </section>
+
+  <!-- ============ STATISTIKY ============ -->
+  <section id="view-stats" class="view">
+    <div class="card filters">
+      <div class="seg" id="statRange">
+        <button data-range="12" class="active">12 období</button>
+        <button data-range="24">24 období</button>
+        <button data-range="years">Po letech</button>
+      </div>
+      <label>Výdaje <select id="statScope">
+        <option value="daily">jen denní útrata</option>
+        <option value="all">vše včetně fixních plateb</option>
+        <option value="fixed">jen fixní platby</option>
+      </select></label>
+    </div>
+    <div class="card">
+      <h2>Příjmy a výdaje</h2>
+      <div id="chartBalance" class="chart"></div>
+    </div>
+    <div class="card">
+      <h2>Výdaje podle kategorií</h2>
+      <div id="chartStack" class="chart"></div>
+    </div>
+    <div class="card">
+      <h2>Tabulka po kategoriích</h2>
+      <div class="table-wrap" id="pivot"></div>
+    </div>
+    <div class="card">
+      <h2>Za co nejvíc (podle poznámek)</h2>
+      <div class="muted small">Součet výdajů se stejnou poznámkou ve zvoleném rozsahu. Kliknutím zobrazíte záznamy.</div>
+      <div id="noteStats" class="note-grid"></div>
+    </div>
+  </section>
+
+  <!-- ============ ROK ============ -->
+  <section id="view-year" class="view">
+    <div class="period-nav">
+      <button class="icon-btn" id="prevYear" title="Předchozí rok">‹</button>
+      <div>
+        <h1 id="yearTitle">…</h1>
+        <div class="muted" id="yearRange"></div>
+      </div>
+      <button class="icon-btn" id="nextYear" title="Další rok">›</button>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h2>Roční bilance</h2>
+        <div id="yearBalance" class="ledger"></div>
+      </div>
+      <div class="card">
+        <h2>Mimořádné položky</h2>
+        <p class="muted small">Velké jednorázové příjmy a výdaje (akcie, dovolená, stavba…). Nezapočítávají se
+          do měsíčního přehledu, jen sem do roční bilance.</p>
+        <form id="annualForm" class="annual-form" autocomplete="off">
+          <div class="seg" id="annualKind">
+            <button type="button" data-kind="expense" class="active">Výdaj</button>
+            <button type="button" data-kind="income">Příjem</button>
+          </div>
+          <input name="name" list="annualNames" placeholder="Název (např. Dovolená)" required>
+          <input name="amount" inputmode="decimal" placeholder="Částka" required>
+          <input name="note" placeholder="Poznámka (nepovinná)">
+          <button type="submit">Přidat</button>
+          <datalist id="annualNames"></datalist>
+        </form>
+        <div class="form-error" id="annualErr"></div>
+        <div id="annualLists"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Běžné hospodaření po měsících</h2>
+      <div class="table-wrap" id="yearMonths"></div>
+    </div>
+  </section>
+
+  <!-- ============ PRAVIDELNÉ ============ -->
+  <section id="view-recurring" class="view">
+    <div class="card">
+      <div class="card-head">
+        <h2>Pravidelné měsíční platby</h2>
+        <button id="recApply">Zapsat do aktuálního období</button>
+      </div>
+      <p class="muted small">Šablony fixních plateb (hypotéka, energie, spoření…). Tlačítkem je zapíšete do období jedním klikem –
+        položky, které už v období mají záznam ve stejné kategorii, se přeskočí.</p>
+      <div class="table-wrap">
+        <table class="data" id="recTable">
+          <thead><tr><th>Kategorie</th><th>Poznámka</th><th class="num">Částka</th><th>Aktivní</th><th></th></tr></thead>
+          <tbody></tbody>
+          <tfoot></tfoot>
+        </table>
+      </div>
+      <button class="ghost" id="recAdd">+ Přidat šablonu</button>
+    </div>
+  </section>
+
+  <!-- ============ NASTAVENÍ ============ -->
+  <section id="view-settings" class="view">
+    <div class="grid-2">
+      <div class="card">
+        <h2>Období</h2>
+        <label class="row">Období začíná dnem
+          <input type="number" id="setStartDay" min="1" max="28" style="width:5em"> v měsíci
+        </label>
+        <p class="muted small">Např. 15 = období „Listopad“ trvá od 15. 11. do 14. 12. (podle výplaty).</p>
+        <button id="saveSettings">Uložit</button>
+      </div>
+      <div class="card">
+        <h2>Data v telefonu</h2>
+        <p class="muted small" id="dataInfo"></p>
+        <div class="data-actions">
+          <button id="mBackup">Stáhnout zálohu</button>
+          <button class="ghost" id="mShare" hidden>Poslat zálohu…</button>
+          <button class="ghost" id="mImport">Nahrát data / zálohu</button>
+          <button class="ghost" id="mCsv">Export do CSV</button>
+        </div>
+        <input type="file" id="mImportFile" hidden>
+        <p class="muted small" id="mBackupInfo"></p>
+        <p class="muted small">Data jsou uložená jen v tomto telefonu (v prohlížeči). Občas si stáhněte zálohu
+          (soubor <code>.db</code>) a uložte ji např. na Google Disk. Stejným tlačítkem „Nahrát“ jde načíst
+          i databáze z počítače (<code>data\cashtracker.db</code>).</p>
+        <details><summary>Automatické zálohy v telefonu (posledních 7 dní)</summary><div id="mAutoBackups"></div></details>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <h2>Kategorie</h2>
+        <button class="ghost" id="catAdd">+ Nová kategorie</button>
+      </div>
+      <p class="muted small">„Nutná“ určuje, jak se nová platba v kategorii předvyplní (při zadání jde přepnout).
+        Archivované kategorie se nenabízejí při zadávání, ale zůstávají ve statistikách.
+        Sloučením přesunete všechny záznamy do jiné kategorie (např. „Hospoda“ → „Jídlo“).</p>
+      <div class="table-wrap">
+        <table class="data" id="catTable">
+          <thead><tr><th>Název</th><th>Typ</th><th>Fixní</th><th>Archiv</th><th title="Výchozí příznak nových plateb">Nutná</th><th>Povinná poznámka</th><th class="num">Záznamů</th><th>Sloučit do</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+
+<dialog id="editDialog">
+  <div class="dialog-inner">
+    <h2>Upravit záznam</h2>
+    <div id="editFormHost"></div>
+  </div>
+</dialog>
+
+<div id="tooltip" class="tooltip" hidden></div>
+<div id="toast" class="toast" hidden></div>
+
+<script src="vendor/sql-wasm.js"></script>
+<script src="backend.js"></script>
+<script src="app.js"></script>
+<script src="mobile.js"></script>
+</body>
+</html>
